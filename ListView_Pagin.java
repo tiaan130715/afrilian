@@ -32,9 +32,9 @@ public class ListView_Pagin extends Activity implements SearchView.OnQueryTextLi
 
 	private ListView listview;
     private TextView title;
-    private String JSON_STRING;
+    private String JSON_STRING_MYSQL, JSON_STRING_PG;
     EditText searchView;
-    private String username, url;
+    private String username, url, urlpg;
     SharedPreferences sharedpreferences;
     
     
@@ -60,7 +60,7 @@ public class ListView_Pagin extends Activity implements SearchView.OnQueryTextLi
     username = getIntent().getStringExtra(Konfigurasi.TAG_USERNAME);
 	
     url = "http://172.16.3.22/android/allabsen.php?username="+username;
-    //url = "http://172.16.3.22/android/pg_allabsen.php?username="+username;
+    urlpg = "http://172.16.3.22/android/pgabsen.php?nik="+username;
     //url = "http://172.16.3.22/Andro/allabsen.php?username="+username;
     
     
@@ -77,7 +77,33 @@ public class ListView_Pagin extends Activity implements SearchView.OnQueryTextLi
     data = new ArrayList<HashMap<String, String>>();
     
     try {
-        jsonObject = new JSONObject(JSON_STRING);
+        jsonObject = new JSONObject(JSON_STRING_PG);
+        JSONArray result = jsonObject.getJSONArray(Konfigurasi.TAG_JSON_ARRAY);
+        
+        for(int i = 0; i<TOTAL_LIST_ITEMS; i++){
+            JSONObject jo = result.getJSONObject(i);
+            String checktime = jo.getString(Konfigurasi.TAG_CHECKTIME);
+            String status = jo.getString(Konfigurasi.TAG_STATUS);
+            String warehouse = jo.getString(Konfigurasi.TAG_WAREHOUSE);
+            String nik = jo.getString(Konfigurasi.TAG_NIK);
+
+            HashMap<String,String> employees = new HashMap<String, String>();
+            employees.put(Konfigurasi.TAG_CHECKTIME,checktime);
+            employees.put(Konfigurasi.TAG_STATUS,status);
+            employees.put(Konfigurasi.TAG_WAREHOUSE,warehouse);
+            employees.put(Konfigurasi.TAG_NIK,nik);
+            data.add(employees);
+        }
+    }catch (JSONException e) {
+        e.printStackTrace();
+    }
+     
+    loadList(0);
+     
+    CheckBtnBackGroud(0);
+    
+    try {
+        jsonObject = new JSONObject(JSON_STRING_MYSQL);
         JSONArray result = jsonObject.getJSONArray(Konfigurasi.TAG_JSON_ARRAY);
         
         for(int i = 0; i<TOTAL_LIST_ITEMS; i++){
@@ -121,20 +147,19 @@ public class ListView_Pagin extends Activity implements SearchView.OnQueryTextLi
                 protected void onPostExecute(String s) {
                     super.onPostExecute(s);
                     loading.dismiss();
-                    JSON_STRING = s;
+                    String[] respon = s.split("/");
+                    JSON_STRING_MYSQL=respon[0];
+                    JSON_STRING_PG=respon[1];
                     showEmployee();
                 }
+                
             @Override
             protected String doInBackground(Void... params) {
                 RequestHandler rh = new RequestHandler();
                 String s = rh.sendGetRequest(url);
-                return s;
+                String h = rh.sendGetRequest(urlpg);
+                return  s +"/"+ h;
             }
-            //protected String doInBackground1(Void... params) {
-            //    RequestHandler rh = new RequestHandler();
-            //    String s = rh.sendGetRequest(url);
-            //    return s;
-            //}
         }
         GetJSON gj = new GetJSON();
         gj.execute();
@@ -194,7 +219,6 @@ public class ListView_Pagin extends Activity implements SearchView.OnQueryTextLi
                 		android.R.color.white));
             }
         }
-         
     }
      
     /**
@@ -219,6 +243,32 @@ public class ListView_Pagin extends Activity implements SearchView.OnQueryTextLi
         }
         sd = new SimpleAdapter(ListView_Pagin.this, sort, R.layout.list_item,
                 new String[]{Konfigurasi.TAG_DTIME,Konfigurasi.TAG_TYPE, Konfigurasi.TAG_MABSEN, Konfigurasi.TAG_USERNAME},
+                new int[]{R.id.dtims, R.id.tipe, R.id.absen, R.id.nik});
+        listview.setAdapter(sd);
+        
+        searchView.addTextChangedListener(new TextWatcher() {
+            
+            @Override
+            public void onTextChanged(CharSequence cs, int arg1, int arg2, int arg3) {
+                // When user changed the Text
+                ((Filterable) ListView_Pagin.this.sd).getFilter().filter(cs);   
+            }
+             
+            @Override
+            public void beforeTextChanged(CharSequence arg0, int arg1, int arg2,
+                    int arg3) {
+                // TODO Auto-generated method stub
+                 
+            }
+             
+            @Override
+            public void afterTextChanged(Editable arg0) {
+                // TODO Auto-generated method stub                          
+            }
+        });
+        
+        sd = new SimpleAdapter(ListView_Pagin.this, sort, R.layout.list_item,
+                new String[]{Konfigurasi.TAG_CHECKTIME,Konfigurasi.TAG_STATUS, Konfigurasi.TAG_WAREHOUSE, Konfigurasi.TAG_NIK},
                 new int[]{R.id.dtims, R.id.tipe, R.id.absen, R.id.nik});
         listview.setAdapter(sd);
         
